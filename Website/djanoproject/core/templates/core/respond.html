@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    {% extends 'core/base.html' %}
+{% block content %}
+  <h2>Отклик на заявку #{{ request_obj.pk }}</h2>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button>Отправить отклик</button>
+  </form>
+{% endblock %}
+</body>
+</html>

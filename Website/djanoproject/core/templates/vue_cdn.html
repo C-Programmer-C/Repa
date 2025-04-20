@@ -1,0 +1,263 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div id="app">
+  <div v-if="loading">Загрузка...</div>
+  <div v-else>
+    <h1>Приложение помощи ветеранам</h1>
+    
+    <!-- Секция с кнопками -->
+    <div class="section">
+      <h2>Выберите роль:</h2>
+      <button @click="setRole('volunteer')" :class="{ active: role === 'volunteer' }">Волонтер</button>
+      <button @click="setRole('veteran')" :class="{ active: role === 'veteran' }">Ветеран</button>
+    </div>
+    
+    <!-- Секция с заявками (для волонтеров) -->
+    <div v-if="role === 'volunteer'" class="section">
+      <h2>Заявки от ветеранов:</h2>
+      <div v-if="requests.length === 0">Нет активных заявок</div>
+      <div v-else class="requests-grid">
+        <div v-for="request in requests" :key="request.id" class="request-card">
+          <h3>[[ request.title ]]</h3>
+          <p>Тип: [[ request.type_display ]]</p>
+          <p>Местоположение: [[ request.location ]]</p>
+          <p>Описание: [[ request.description ]]</p>
+          <button @click="respondToRequest(request.id)">Откликнуться</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Секция для ветеранов -->
+    <div v-if="role === 'veteran'" class="section">
+      <h2>Мои заявки:</h2>
+      <button @click="showNewRequestForm = !showNewRequestForm">
+        [[ showNewRequestForm ? 'Скрыть форму' : 'Создать новую заявку' ]]
+      </button>
+      
+      <!-- Форма создания заявки -->
+      <div v-if="showNewRequestForm" class="form-container">
+        <h3>Новая заявка</h3>
+        <form @submit.prevent="createRequest">
+          <div class="form-group">
+            <label>Тип помощи:</label>
+            <select v-model="newRequest.help_type" required>
+              <option value="shopping">Закупки</option>
+              <option value="medical">Медпомощь</option>
+              <option value="walk">Прогулка</option>
+              <option value="other">Другое</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Описание:</label>
+            <textarea v-model="newRequest.description" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Местоположение:</label>
+            <input type="text" v-model="newRequest.location" required>
+          </div>
+          <button type="submit">Создать заявку</button>
+        </form>
+      </div>
+      
+      <!-- Список заявок ветерана -->
+      <div v-if="myRequests.length === 0" class="mt-4">У вас нет активных заявок</div>
+      <div v-else class="requests-grid">
+        <div v-for="request in myRequests" :key="request.id" class="request-card">
+          <h3>Заявка #[[ request.id ]]</h3>
+          <p>Тип: [[ request.type_display ]]</p>
+          <p>Местоположение: [[ request.location ]]</p>
+          <p>Статус: [[ request.status_display ]]</p>
+          <button v-if="request.status !== 'done'" @click="completeRequest(request.id)">
+            Завершить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .section {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+  
+  button {
+    padding: 8px 16px;
+    margin: 5px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button.active {
+    background-color: #1d4ed8;
+  }
+  
+  .requests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  
+  .request-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #f9fafb;
+  }
+  
+  .form-container {
+    background-color: #f3f4f6;
+    padding: 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  
+  input, select, textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+  }
+  
+  textarea {
+    min-height: 100px;
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.2.47/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+  const { createApp, ref, onMounted, computed } = Vue;
+  
+  createApp({
+    delimiters: ['[[', ']]'], // Django использует {{ }}, поэтому меняем delimiters Vue
+    setup() {
+      const loading = ref(true);
+      const role = ref('volunteer');
+      const requests = ref([]);
+      const myRequests = ref([]);
+      const showNewRequestForm = ref(false);
+      const newRequest = ref({
+        help_type: 'shopping',
+        description: '',
+        location: ''
+      });
+      
+      // Загрузка заявок
+      const fetchRequests = async () => {
+        try {
+          const response = await axios.get('/api/requests/');
+          requests.value = response.data.requests || [];
+          loading.value = false;
+        } catch (error) {
+          console.error('Error fetching requests:', error);
+          loading.value = false;
+        }
+      };
+      
+      // Загрузка заявок ветерана
+      const fetchMyRequests = async () => {
+        try {
+          // Для демонстрации используем те же данные
+          const response = await axios.get('/api/requests/');
+          myRequests.value = response.data.requests || [];
+        } catch (error) {
+          console.error('Error fetching my requests:', error);
+        }
+      };
+      
+      // Создание новой заявки
+      const createRequest = async () => {
+        try {
+          await axios.post('/api/requests/create/', newRequest.value);
+          alert('Заявка успешно создана!');
+          newRequest.value = {
+            help_type: 'shopping',
+            description: '',
+            location: ''
+          };
+          showNewRequestForm.value = false;
+          fetchMyRequests();
+        } catch (error) {
+          console.error('Error creating request:', error);
+          alert('Ошибка при создании заявки');
+        }
+      };
+      
+      // Отклик на заявку
+      const respondToRequest = async (requestId) => {
+        try {
+          await axios.post(`/api/requests/${requestId}/respond/`, {
+            contact_info: 'Контактная информация волонтера'
+          });
+          alert('Вы успешно откликнулись на заявку!');
+          fetchRequests();
+        } catch (error) {
+          console.error('Error responding to request:', error);
+          alert('Ошибка при отклике на заявку');
+        }
+      };
+      
+      // Завершение заявки
+      const completeRequest = async (requestId) => {
+        try {
+          await axios.post(`/api/requests/${requestId}/complete/`);
+          alert('Заявка завершена!');
+          fetchMyRequests();
+        } catch (error) {
+          console.error('Error completing request:', error);
+          alert('Ошибка при завершении заявки');
+        }
+      };
+      
+      // Установка роли
+      const setRole = (newRole) => {
+        role.value = newRole;
+        if (newRole === 'veteran') {
+          fetchMyRequests();
+        } else {
+          fetchRequests();
+        }
+      };
+      
+      // Инициализация
+      onMounted(() => {
+        fetchRequests();
+      });
+      
+      return {
+        loading,
+        role,
+        requests,
+        myRequests,
+        showNewRequestForm,
+        newRequest,
+        fetchRequests,
+        fetchMyRequests,
+        createRequest,
+        respondToRequest,
+        completeRequest,
+        setRole
+      };
+    }
+  }).mount('#app');
+</script>
+{% endblock %} 

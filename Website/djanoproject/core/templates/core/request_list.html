@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+        function viewRequestsInUnity() {
+            // Открываем Unity приложение с указанием, что нужно загрузить все заявки
+            const unityProtocolUrl = `unity://open-map?load=all`;
+            window.location.href = unityProtocolUrl;
+            
+            // Запасной вариант при отсутствии приложения
+            setTimeout(function() {
+                window.location.href = "{% url 'api_requests' %}";
+            }, 500);
+        }
+    </script>
+</head>
+<body>
+  <h2>Лента заявок</h2>
+  <form method="get">
+    Тип помощи:
+    <select name="help_type">
+      <option value="">– все –</option>
+      {% for code,label in requests.model.HELP_TYPES %}
+        <option value="{{ code }}"
+          {% if request.GET.help_type == code %}selected{% endif %}>
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+    Местоположение: <input name="location" value="{{ request.GET.location }}">
+    <button>Фильтровать</button>
+  </form>
+  
+  {% if user.is_volunteer %}
+    <p>
+      <button class="btn btn-success" onclick="viewRequestsInUnity()">
+        Просмотреть все заявки на карте (Unity)
+      </button>
+    </p>
+  {% endif %}
+  
+  <ul>
+    {% for hr in requests %}
+      <li>
+        <a href="{% url 'request_detail' hr.pk %}">
+          [{{ hr.get_help_type_display }}] {{ hr.location }} – {{ hr.get_status_display }}
+        </a>
+      </li>
+    {% empty %}<li>Нет заявок</li>{% endfor %}
+  </ul>
+</body>
+</html>
+{% endblock %}

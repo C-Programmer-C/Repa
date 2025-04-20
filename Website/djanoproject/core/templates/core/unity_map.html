@@ -1,0 +1,42 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="unity-map-container">
+    <h2>Карта заявок</h2>
+    <p>Здесь вы можете просмотреть все активные заявки на карте.</p>
+    
+    <div id="unity-map-container" style="width: 100%; height: 600px; border: 1px solid #ccc; margin-top: 20px;">
+        <p id="loading-message" style="text-align: center; margin-top: 250px;">Загрузка карты...</p>
+        <!-- Здесь будет отображаться Unity WebGL приложение -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // URL API для получения заявок
+            const apiUrl = "{% url 'api_requests' %}";
+            
+            // Загружаем данные заявок для отображения
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Здесь будет код для инициализации Unity WebGL приложения
+                    // Пример (нужно заменить на ваш реальный код инициализации):
+                    document.getElementById('loading-message').innerHTML = 
+                        `Загружено ${data.requests.length} заявок. <br>
+                        <button class="btn btn-success mt-3" onclick="window.location.href='unity://open-map?load=all'">
+                            Открыть в приложении Unity
+                        </button>`;
+                    
+                    // Для разработки - вывод данных в консоль
+                    console.log("Данные заявок:", data);
+                })
+                .catch(error => {
+                    document.getElementById('loading-message').innerHTML = 
+                        `Ошибка загрузки данных: ${error}. <br>
+                        <button class="btn btn-warning mt-3" onclick="window.location.reload()">
+                            Попробовать снова
+                        </button>`;
+                });
+        });
+    </script>
+</div>
+{% endblock %} 

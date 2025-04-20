@@ -1,0 +1,39 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+        function openInUnityApp() {
+            // Формируем ссылку для открытия Unity приложения с параметрами
+            const unityProtocolUrl = `unity://open-app?request_id={{ request_obj.pk }}`;
+            window.location.href = unityProtocolUrl;
+            
+            // В случае если протокол не поддерживается, показываем сообщение
+            setTimeout(function() {
+                alert('Убедитесь, что Unity приложение установлено на вашем устройстве');
+            }, 500);
+        }
+    </script>
+</head>
+<body>
+  <h2>Заявка #{{ request_obj.pk }}</h2>
+  <p>Тип: {{ request_obj.get_help_type_display }}</p>
+  <p>Описание: {{ request_obj.description }}</p>
+  <p>Местоположение: {{ request_obj.location }}</p>
+  <p>Статус: {{ request_obj.get_status_display }}</p>
+  {% if user.is_volunteer %}
+    <p><a href="{% url 'respond_request' request_obj.pk %}">Откликнуться</a></p>
+    <p><button class="btn btn-primary" onclick="openInUnityApp()">Открыть в Unity приложении</button></p>
+  {% endif %}
+  <h3>Отклики</h3>
+  <ul>
+    {% for app in request_obj.applications.all %}
+      <li>{{ app.volunteer.username }}: {{ app.contact_info }}</li>
+    {% empty %}<li>Пока нет откликов</li>{% endfor %}
+  </ul>
+</body>
+</html>
+{% endblock %}

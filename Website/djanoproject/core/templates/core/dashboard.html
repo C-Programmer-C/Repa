@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+  {% extends 'core/base.html' %}
+{% block content %}
+  <h2>Мои заявки</h2>
+  <ul>
+    {% for hr in requests %}
+      <li>
+        #{{ hr.pk }} [{{ hr.get_status_display }}] {{ hr.get_help_type_display }} в
+        {{ hr.location }}
+        <a href="{% url 'update_status' hr.pk %}">Изменить статус</a> |
+        <a href="{% url 'revoke_request' hr.pk %}">Отозвать</a>
+      </li>
+    {% empty %}<li>Нет созданных заявок</li>{% endfor %}
+  </ul>
+{% endblock %}
+</body>
+</html>

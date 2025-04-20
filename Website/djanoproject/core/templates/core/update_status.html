@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+  {% extends 'core/base.html' %}
+  {% block content %}
+    <h2>Обновить статус заявки #{{ request_obj.pk }}</h2>
+    <form method="post">{% csrf_token %}
+      <select name="status">
+        {% for code, label in choices %}
+          <option value="{{ code }}"
+            {% if request_obj.status == code %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+      <button>Сохранить</button>
+    </form>
+  {% endblock %}
+</body>
+</html>
